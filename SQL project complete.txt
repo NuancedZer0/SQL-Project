@@ -1,0 +1,75 @@
+--increase salary different percentages based on base salary amounts and then update the base salary in database
+
+alter table employees
+--add a new column to table employees for the new salary after calculation
+add "NEW_SALARY" number(8,2);
+update employees
+--give the new column values from salary
+set "NEW_SALARY" = salary
+
+--update employees
+
+--make a conditional statement where percentage of raise increases or decreases based on the current salary
+set new_salary = case
+--first condition is to check if the values in new_salary are less then 5000, and if they are increase the value of the salary by 20%
+when new_salary < 5000 then (new_salary * 1.20)
+--second condition is to check to see if the values are between 10000 and 5000, and if they are increase it by 15%
+when new_salary < 10000 and new_salary > 5000 then (new_salary * 1.15)
+-- third condition is to see if the values are between 15000 and 10000 and if they are increase it by 10%
+when new_salary < 15000 and new_salary > 10000 then (new_salary * 1.1)
+-- for any value bigger than 15000 raise it by 5%
+else (new_salary * 1.05)
+end;
+
+-- query to check and see the difference between the old and new salary
+select job_id, ,salary, new_salary, (new_salary - salary) as raise
+from employees
+order by raise desc
+
+--update the salary column by taking the values from new_salary
+alter table employees
+update employees
+set salary = new_salary
+
+select employees.job_id, jobs.job_title, employees.salary, jobs.max_salary,
+-- take the sum of the highest salary for the position and divide it by the maximum amount of cont.
+-- salary the company can offer for that position, round the difference to 2 digits
+round((sum(employees.salary)/jobs.max_salary), 2) as difference
+--pull employees table for salary and job id columns
+from employees
+-- join the employees table with the jobs table by combining the job_id field
+join jobs on employees.job_id = jobs.job_id
+-- make a subquery with an an aggregating pull for a distinct maximum salary for each position in the company
+where (employees.job_id, employees.salary) in (
+    select distinct employees.job_id, max(employees.salary)
+    from employees
+    group by employees.job_id) 
+-- aggregate the data with sum of salary and max_salary
+group by employees.job_id, employees.salary, jobs.job_title, jobs.max_salary
+-- sort by maximum salary for a clean view of highest paid position to lowest
+order by max(employees.salary) desc
+
+select employees.job_id, jobs.job_title, employees.salary, jobs.max_salary,
+round((sum(employees.salary)/jobs.max_salary), 2) as difference
+from employees
+join jobs on employees.job_id = jobs.job_id
+where (employees.job_id, employees.salary) in (
+    select distinct employees.job_id, max(employees.salary)
+    from employees
+    group by employees.job_id) 
+group by employees.job_id, employees.salary, jobs.job_title, jobs.max_salary
+order by max(employees.salary) desc
+
+-- how many employees has the company hired this year
+
+--run a query to see how many employees were hired this year and what departments they were hired into
+--using to_char we convert the date into a 'char' year value as we do not need the day and month
+select departments.department_name, employees.department_id, count(to_char(to_date(employees.hire_date, 'DD-MON-RR'), 'YYYY')) "new hires"
+from employees 
+-- join departments and employees table to get department name in our merged table
+inner join departments on employees.department_id = departments.department_id
+--set conditional clause to filter out hire dates between 01/01/2000 to 31/12/2000
+where hire_date >= '01-JAN-00' and hire_date <= '31-DEC-00' 
+-- sort by using count in the select query to find out how many people were hired for what departments
+group by departments.department_name, employees.department_id
+
